@@ -34,14 +34,20 @@ public class XTSAES {
             FileReader fr = new FileReader(k);
             BufferedReader buff = new BufferedReader(fr);
             String temp = buff.readLine();
-            key1 = Util.hex2byte(temp.substring(0, 8));
-            key2 = Util.hex2byte(temp.substring(8, 16));
+            key1 = temp.substring(0, 16).getBytes();
+            key2 = temp.substring(16, 32).getBytes();
+            System.out.println(key1.length);
+            System.out.println(key2.length);
             aes.setKey(key2);
 
+            String input= "";
             fr = new FileReader(i);
             buff = new BufferedReader(fr);
             while ((temp = buff.readLine()) != null) {
+                System.out.println(temp);
+                input = input + temp;
             }
+            System.out.println(input);
         } catch (Exception e) {
             e.printStackTrace();
         }
