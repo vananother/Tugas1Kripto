@@ -10,7 +10,7 @@ import java.io.InputStreamReader;
  */
 /**
  *
- * @author van
+ * @author Anang Ferdi Kusuma, Arief Yudha Satria, Evan Ariansyah H
  */
 public class XTSAES {
 
