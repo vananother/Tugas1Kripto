@@ -491,6 +491,7 @@ class AES {
         byte [] plain	= Util.hex2byte(hplain);
         byte [] cipher	= Util.hex2byte(hcipher);
 	byte [] result;
+        //
 
 	AES testAES = new AES();	// create new AES instance to test triple
 	testAES.traceLevel = lev;	// select level of trace info 
