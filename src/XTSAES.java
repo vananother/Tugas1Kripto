@@ -1,6 +1,8 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 
 /*
  * To change this template, choose Tools | Templates
@@ -21,8 +23,10 @@ public class XTSAES {
     private static byte[] tweak = Util.hex2byte("0123456789abcdef0123456789abcdef");
     byte[] key1;
     byte[] key2;
-    byte[][] alphaTable;
+    byte[][] tTable;
     byte[] plain;
+    byte[][] plainBlock;
+    byte[] tweakAfterEncrypt;
 
     public XTSAES(File input, File key, File output, int mode) {
         aes = new AES();
@@ -34,6 +38,7 @@ public class XTSAES {
     public void start() {
         try {
             System.out.println(0x100);
+            //key
             FileReader fr = new FileReader(k);
             BufferedReader buff = new BufferedReader(fr);
             String temp = buff.readLine();
@@ -41,6 +46,7 @@ public class XTSAES {
             key2 = temp.substring(16, 32).getBytes();
             aes.setKey(key2);
             String input = "";
+            //input
             fr = new FileReader(i);
             buff = new BufferedReader(fr);
             temp = buff.readLine();
@@ -52,51 +58,63 @@ public class XTSAES {
             }
             System.out.println(input);
             plain = input.getBytes();
-            alphaTable = new byte[plain.length][16];
-            fillAlphaTable();
+            plainBlock = new byte[(int) Math.ceil(plain.length / 16)][16];
+            for (int i = 0; i < plainBlock.length; i++) {
+                System.arraycopy(plain, 16 * i, plainBlock[i], 0, 16);
+            }
+            for (int i = 0; i < plain.length; i++) {
+                System.out.print(plain[i] + " ");
+            }
+            System.out.println();
+            for (int i = 0; i < plainBlock.length; i++) {
+                for (int j = 0; j < plainBlock[i].length; j++) {
+                    System.out.print(plainBlock[i][j] + " ");
+                }
+                System.out.println();
+            }
+            tTable = new byte[plainBlock.length][16];
+            tweakAfterEncrypt = aes.encrypt(tweak);
+            fillTTable();
+            //output
+            FileWriter fw = new FileWriter(o);
+            BufferedWriter bw = new BufferedWriter(fw);
+            for (int i = 0; i < plainBlock.length - 2; i++) {
+                xtsBlockEncrypt(plain, i);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public byte[] xtsBlockEncrypt(byte[] plain, int j) {
-        byte[] t = mul(aes.encrypt(tweak), alphaTable[j]);
-        byte[] pp = xor(plain, t);
+        byte[] pp = xor(plain, tTable[j]);
         aes.setKey(key1);
         byte[] cc = aes.encrypt(pp);
-        byte[] cj = xor(cc, t);
+        byte[] cj = xor(cc, tTable[j]);
         return cj;
     }
 
     public byte[] xtsBlockDecrypt(byte[] cipher, int j) {
-        byte[] t = mul(aes.encrypt(tweak), alphaTable[j]);
-        byte[] cc = xor(cipher, t);
+        byte[] cc = xor(cipher, tTable[j]);
         aes.setKey(key1);
         byte[] pp = aes.decrypt(cc);
-        byte[] pj = xor(pp, t);
+        byte[] pj = xor(pp, tTable[j]);
         return pj;
     }
 
-    private void fillAlphaTable() {
-        alphaTable[0] = new byte[16];
-        alphaTable[0][0] = 1;
-        alphaTable[1] = new byte[16];
-        alphaTable[1][0] = 2;
-        for (int i = 2; i < plain.length; i++) {
+    private void fillTTable() {
+        tTable[0] = new byte[16];
+        tTable[0] = tweakAfterEncrypt;
+        for (int i = 1; i < plain.length; i++) {
             byte[] temp = new byte[16];
-            temp[0] = (byte) ((alphaTable[i - 1][0] << 1) % 128
-                    ^ 135 * (alphaTable[i - 1][15] >>> 7));
+            temp[0] = (byte) ((tTable[i - 1][0] << 1) % 128
+                    ^ 135 * (tTable[i - 1][15] >>> 7));
             for (int j = 1; j < 16; j++) {
-                temp[j] = (byte) ((alphaTable[i - 1][j] << 1) % 128
-                        ^ (alphaTable[i - 1][j - 1] >>> 7));
+                temp[j] = (byte) ((tTable[i - 1][j] << 1) % 128
+                        ^ (tTable[i - 1][j - 1] >>> 7));
             }
-            alphaTable[i] = temp;
+            tTable[i] = temp;
         }
-    }
-
-    private byte[] mul(byte[] a, byte[] b) {
-        byte[] res = new byte[a.length];
-        return res;
     }
 
     private byte[] xor(byte[] a, byte[] b) {
